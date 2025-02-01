@@ -1,4 +1,4 @@
-use chrono::{NaiveDate};
+use chrono::NaiveDate;
 use icalendar::Calendar;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use serde::Deserialize;
@@ -140,6 +140,41 @@ mod tests {
 
             if let icalendar::CalendarDateTime::Floating(naive_date_time) = calendar_date_time {
                 assert_eq!(naive_date_time.date(), chrono::Local::now().date_naive());
+                assert_eq!(naive_date_time.time().hour(), 16);
+                assert_eq!(naive_date_time.time().minute(), 0);
+            }
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_tmrw_historical_leap_year() {
+        let msg = "ACM Club is meeting tomorrow from 4-6pm in OCNL 241!";
+        let res = parse_msg(&msg, &NaiveDate::from_ymd_opt(2024, 2, 28).unwrap()).await;
+
+        assert!(matches!(res, Ok(_)));
+        let calendar = res.unwrap();
+        assert_eq!(calendar.components.len(), 1);
+        let event = calendar.components.first().unwrap().as_event().unwrap();
+
+        let location = event.get_location();
+        assert!(location.is_some(), "Expected location to be present");
+        assert_eq!(location.unwrap(), "OCNL 241");
+
+        let start_dt = event.get_start();
+        assert!(start_dt.is_some(), "Expected start date to be present");
+        let start_dt = start_dt.unwrap();
+
+        assert!(matches!(start_dt, icalendar::DatePerhapsTime::DateTime(_)));
+
+        if let icalendar::DatePerhapsTime::DateTime(calendar_date_time) = start_dt {
+            assert!(matches!(
+                calendar_date_time,
+                icalendar::CalendarDateTime::Floating(_)
+            ));
+
+            if let icalendar::CalendarDateTime::Floating(naive_date_time) = calendar_date_time {
+                assert_eq!(naive_date_time.date(), NaiveDate::from_ymd_opt(2024, 2, 29).unwrap());
                 assert_eq!(naive_date_time.time().hour(), 16);
                 assert_eq!(naive_date_time.time().minute(), 0);
             }
