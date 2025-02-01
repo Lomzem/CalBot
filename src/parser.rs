@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 const GROQ_ENDPOINT: &str = "https://api.groq.com/openai/v1/chat/completions";
 const PROMPT_INSTRUCTIONS: &str = include_str!("llm-prompt.txt");
-const FORMAT: &str = include_str!("ics-format.txt");
+const FORMAT: &str = include_str!("ics-format.ics");
 const MAX_COMPLETION_TOKEN: usize = 300;
 
 #[derive(Deserialize)]
