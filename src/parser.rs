@@ -45,7 +45,7 @@ impl std::error::Error for Error {}
 pub async fn parse_msg(msg: &str, message_date: &NaiveDate) -> Result<Calendar, Error> {
     let groq_key = std::env::var("GROQ_API_KEY").expect("GROQ_API_KEY missing");
 
-    let cur_date_str = "When interpreting relative dates like 'next Monday', 'tomorrow', or 'in 4 days', fill DTEND, DTSTAMP, and DTSTART with \"next_%A\", \"today\", \"tmrw\", or \"+4d\"" .to_string();
+    let cur_date_str = "When interpreting relative dates like 'next Monday', 'tomorrow', or 'in 4 days', fill DTEND, and DTSTART with \"next_%A\", \"+00\" (for today), \"+01\" (for tomorrow), or \"+04\".".to_string();
 
     let full_prompt = [PROMPT_INSTRUCTIONS, FORMAT, &cur_date_str, msg].join("\r\n");
     dbg!(&msg);
@@ -96,30 +96,9 @@ pub async fn parse_msg(msg: &str, message_date: &NaiveDate) -> Result<Calendar, 
 
     dbg!(&output);
 
-    let mut calendar: Calendar = output.parse().map_err(|_| Error::ParseFailure)?;
-
     // fix relative dates
 
-    let event = calendar
-        .components
-        .first_mut()
-        .ok_or(Error::ParseFailure)?
-        .as_event()
-        .ok_or(Error::ParseFailure)?;
-
-    let start = event.get_start().ok_or(Error::ParseFailure)?;
-
-    let start_dt = if let DatePerhapsTime::DateTime(calendar_date_time) = start {
-        if let CalendarDateTime::Floating(naive_date_time) = calendar_date_time {
-            naive_date_time
-        } else {
-            return Err(Error::ParseFailure.into());
-        }
-    } else {
-        return Err(Error::ParseFailure.into());
-    };
-
-    dbg!(&start_dt);
+    let calendar: Calendar = output.parse().map_err(|_| Error::ParseFailure)?;
 
     Ok(calendar)
 }

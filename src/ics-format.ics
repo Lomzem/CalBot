@@ -3,9 +3,8 @@ PRODID:Lomzem@CalBot
 VERSION:2.0
 BEGIN:VEVENT
 DESCRIPTION:<event description>
-DTEND:%Y%m%dT%H%M%S
-DTSTAMP:%Y%m%dT%H%M%S
 DTSTART:%Y%m%dT%H%M%S
+DTEND:%Y%m%dT%H%M%S
 LOCATION:
 SUMMARY:<event name, titlecase>
 END:VEVENT
