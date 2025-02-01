@@ -49,7 +49,7 @@ pub fn calendar_message(calendar: &Calendar) -> String {
     };
 
     let end_dt = if let DatePerhapsTime::DateTime(dt) = event
-        .get_start()
+        .get_end()
         .expect("Parsing should ensure this is Some")
     {
         if let CalendarDateTime::Floating(dt) = dt {
@@ -65,7 +65,7 @@ pub fn calendar_message(calendar: &Calendar) -> String {
         .push_quote_safe("**Event Name**: ")
         .push_line_safe(event.get_summary().expect("Event should have a summary"))
         .push_quote_safe("**Date**: ")
-        .push_line_safe(start_dt.date().to_string())
+        .push_line_safe(start_dt.date().format("%A, %b %e, %Y").to_string())
         .push_quote_safe("**Start Time**: ")
         .push_line_safe(start_dt.time().format("%l:%M %p").to_string())
         .push_quote_safe("**End Time**: ")
