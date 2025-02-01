@@ -5,7 +5,7 @@ use serenity::{
 
 use crate::{
     parser::{parse_msg, Error},
-    utils::upload_calendar,
+    utils::{calendar_message, upload_calendar},
 };
 
 pub struct Handler;
@@ -34,7 +34,11 @@ impl EventHandler for Handler {
             Ok(calendar) => {
                 let cal_url = upload_calendar(&ctx, &calendar).await;
                 let btn = CreateButton::new_link(cal_url).label("Add to iCal");
-                let message = CreateMessage::new().button(btn).reference_message(&msg);
+                let cal_msg = calendar_message(&calendar);
+                let message = CreateMessage::new()
+                    .content(cal_msg)
+                    .button(btn)
+                    .reference_message(&msg);
                 if let Err(why) = msg.channel_id.send_message(&ctx, message).await {
                     println!("Error sending message: {why}");
                 }
