@@ -1,4 +1,4 @@
-use chrono::Local;
+use chrono::{NaiveDate};
 use icalendar::Calendar;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use serde::Deserialize;
@@ -42,12 +42,12 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-pub async fn parse_msg(msg: &str) -> Result<Calendar, Error> {
+pub async fn parse_msg(msg: &str, message_date: &NaiveDate) -> Result<Calendar, Error> {
     let groq_key = std::env::var("GROQ_API_KEY").expect("GROQ_API_KEY missing");
 
     let cur_date_str = format!(
         "If dates are relative, assume the current date is {}",
-        Local::now().format("%Y-%m-%d").to_string()
+        message_date.format("%Y-%m-%d").to_string()
     );
 
     let full_prompt = [PROMPT_INSTRUCTIONS, FORMAT, &cur_date_str, msg].join("\r\n");
@@ -96,7 +96,7 @@ fn parse_groq_response(groq_resp: GroqResponse) -> Result<Calendar, Error> {
 
 #[cfg(test)]
 mod tests {
-    use chrono::Timelike;
+    use chrono::{Local, Timelike};
     use icalendar::{Component, EventLike};
 
     use super::*;
@@ -107,7 +107,7 @@ mod tests {
     #[ignore]
     async fn test_irrelevant_input() {
         let msg = "69420";
-        let res = parse_msg(&msg).await;
+        let res = parse_msg(&msg, &Local::now().date_naive()).await;
         assert!(matches!(res, Err(Error::ParseFailure)));
     }
 
@@ -115,7 +115,7 @@ mod tests {
     #[ignore]
     async fn test_today_date() {
         let msg = "ACM Club is meeting today from 4-6pm in OCNL 241!";
-        let res = parse_msg(&msg).await;
+        let res = parse_msg(&msg, &Local::now().date_naive()).await;
 
         assert!(matches!(res, Ok(_)));
         let calendar = res.unwrap();
