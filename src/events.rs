@@ -44,29 +44,24 @@ impl EventHandler for Handler {
                 }
                 return;
             }
-            Err(e) => {
-                if let Some(err) = e.downcast_ref::<Error>() {
-                    match err {
-                        Error::ParseFailure => {
-                            if let Err(why) = msg
-                                .reply(&ctx, "Sorry! I couldn't parse that message.")
-                                .await
-                            {
-                                println!("Error sending message: {why}");
-                            }
-                        }
-                        Error::NoResponse => {
-                            if let Err(why) = msg
-                                .reply(&ctx.http, "Sorry! The LLM didn't respond. Try again later.")
-                                .await
-                            {
-                                println!("Error sending message: {why}");
-                            }
-                        }
-                    }
-                } else {
-                    println!("Error: {e}");
+            Err(Error::ParseFailure) => {
+                if let Err(why) = msg
+                    .reply(&ctx, "Sorry! I couldn't parse that message.")
+                    .await
+                {
+                    println!("Error sending message: {why}");
                 }
+            }
+            Err(Error::NoResponse) => {
+                if let Err(why) = msg
+                    .reply(&ctx.http, "Sorry! The LLM didn't respond. Try again later.")
+                    .await
+                {
+                    println!("Error sending message: {why}");
+                }
+            }
+            Err(Error::Reqwest(e)) => {
+                println!("Error: {e}");
             }
         }
     }

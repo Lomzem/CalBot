@@ -27,6 +27,7 @@ struct GroqMessage {
 pub enum Error {
     ParseFailure,
     NoResponse,
+    Reqwest(reqwest::Error),
 }
 
 impl std::fmt::Display for Error {
@@ -34,15 +35,14 @@ impl std::fmt::Display for Error {
         match self {
             Error::ParseFailure => write!(f, "Failed to parse response from Groq API"),
             Error::NoResponse => write!(f, "No response from Groq API"),
+            Error::Reqwest(e) => write!(f, "Reqwest error: {}", e),
         }
     }
 }
 
 impl std::error::Error for Error {}
 
-pub async fn parse_msg(msg: &str) -> anyhow::Result<Calendar> {
-    // OK Variant returns a string representing the
-    // content of a valid .ics file
+pub async fn parse_msg(msg: &str) -> Result<Calendar, Error> {
     let groq_key = std::env::var("GROQ_API_KEY").expect("GROQ_API_KEY missing");
 
     let cur_date_str = format!(
