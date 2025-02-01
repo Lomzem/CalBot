@@ -93,3 +93,56 @@ fn parse_groq_response(groq_resp: GroqResponse) -> Result<Calendar, Error> {
         return Err(Error::NoResponse.into());
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chrono::Timelike;
+    use icalendar::{Component, EventLike};
+
+    use super::*;
+
+    // by default, ignore tests that require a POST request to the Groq API
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_irrelevant_input() {
+        let msg = "69420";
+        let res = parse_msg(&msg).await;
+        assert!(matches!(res, Err(Error::ParseFailure)));
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_today_date() {
+        let msg = "ACM Club is meeting today from 4-6pm in OCNL 241!";
+        let res = parse_msg(&msg).await;
+
+        assert!(matches!(res, Ok(_)));
+        let calendar = res.unwrap();
+        assert_eq!(calendar.components.len(), 1);
+        let event = calendar.components.first().unwrap().as_event().unwrap();
+
+        let location = event.get_location();
+        assert!(location.is_some(), "Expected location to be present");
+        assert_eq!(location.unwrap(), "OCNL 241");
+
+        let start_dt = event.get_start();
+        assert!(start_dt.is_some(), "Expected start date to be present");
+        let start_dt = start_dt.unwrap();
+
+        assert!(matches!(start_dt, icalendar::DatePerhapsTime::DateTime(_)));
+
+        if let icalendar::DatePerhapsTime::DateTime(calendar_date_time) = start_dt {
+            assert!(matches!(
+                calendar_date_time,
+                icalendar::CalendarDateTime::Floating(_)
+            ));
+
+            if let icalendar::CalendarDateTime::Floating(naive_date_time) = calendar_date_time {
+                assert_eq!(naive_date_time.date(), chrono::Local::now().date_naive());
+                assert_eq!(naive_date_time.time().hour(), 16);
+                assert_eq!(naive_date_time.time().minute(), 0);
+            }
+        }
+    }
+}
