@@ -30,6 +30,7 @@ impl EventHandler for Handler {
             Some(ref ref_msg) => parse_msg(&ref_msg.content).await,
             None => parse_msg(&msg.content).await,
         };
+
         match res {
             Ok(calendar) => {
                 let cal_url = upload_calendar(&ctx, &calendar).await;

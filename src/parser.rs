@@ -68,11 +68,21 @@ pub async fn parse_msg(msg: &str) -> Result<Calendar, Error> {
         .header(CONTENT_TYPE, "application/json")
         .header(AUTHORIZATION, format!("Bearer {}", groq_key));
 
-    let groq_resp: GroqResponse = request.send().await?.json().await?;
+    let groq_resp: GroqResponse = request
+        .send()
+        .await
+        .map_err(Error::Reqwest)?
+        .json()
+        .await
+        .map_err(Error::Reqwest)?;
 
+    parse_groq_response(groq_resp)
+}
+
+fn parse_groq_response(groq_resp: GroqResponse) -> Result<Calendar, Error> {
     if let Some(groq_choice) = groq_resp.choices.first() {
         let output = &groq_choice.message.content;
-        if output == "" || output.contains("failed") {
+        if output == "" || output.to_lowercase().contains("failed") {
             return Err(Error::ParseFailure.into());
         }
 
