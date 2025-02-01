@@ -1,5 +1,5 @@
 use serenity::{
-    all::{Context, CreateButton, CreateMessage, EventHandler, Message, Ready},
+    all::{Context, CreateButton, CreateMessage, EventHandler, Message, MessageBuilder, Ready},
     async_trait,
 };
 
@@ -35,9 +35,12 @@ impl EventHandler for Handler {
             Ok(calendar) => {
                 let cal_url = upload_calendar(&ctx, &calendar).await;
                 let btn = CreateButton::new_link(cal_url).label("Add to iCal");
-                let cal_msg = calendar_message(&calendar);
+
+                let mut cal_msg = MessageBuilder::new();
+                calendar_message(&calendar, &mut cal_msg);
+
                 let message = CreateMessage::new()
-                    .content(cal_msg)
+                    .content(cal_msg.build())
                     .button(btn)
                     .reference_message(&msg);
                 if let Err(why) = msg.channel_id.send_message(&ctx, message).await {
