@@ -1,0 +1,1 @@
+Extract the event name, date, time, location, and event description from this message. Don't include any other information. Omit missing values. If you fail, respond with "failed". Output the extracted information in the iOS .ics file format as plaintext:
