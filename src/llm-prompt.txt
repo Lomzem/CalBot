@@ -1,1 +1,28 @@
-Extract the event name, date, start time, end time, location, and event description from this message. Don't include any other information. Omit missing values. If you cannot extract both start and end time, assume the end time is exactly one hour after the start time. If you fail, respond with "failed". Output the extracted information in the iOS .ics file format as plaintext:
+You are a data extractor for calendar events. Given a message, extract information, and output it in JSON format:
+
+Use these keys in your JSON output:
+- title: Event title
+- date: Event date
+- start_time: Event start time
+- end_time: Event end time
+- location: Event location
+- description: Event description
+
+All keys should be strings. Pay attention to the formats for date and time:
+
+Time Format
+Use strftime format %H%M.
+
+Date Formats
+Relative Dates: Use "+00" for today, "+01" for tomorrow, etc.
+Relative Weekdays: Use "_Mon" for next Monday, "_Wed" for next Wednesday, etc.
+Exact Dates: Use "exMMDD" format (e.g., "ex0921" for 9/21).
+Only include the JSON! Nothing else!
+
+Please extract the title, date, start_time, end_time, and location from the following message, and output the extracted data in the specified JSON format as plaintext.
+
+If the message does not seem to be parseable, return an empty JSON object.
+
+Message:
+
+
