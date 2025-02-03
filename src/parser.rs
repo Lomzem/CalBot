@@ -55,10 +55,15 @@ fn parse_date(date_str: &str, msg_date: &NaiveDate) -> Result<NaiveDate, Error> 
     let mut date_iter = date_str.chars();
     match date_iter.next() {
         Some('+') => {
-            let days_delta: u64 = date_iter.collect::<String>().parse().map_err(|_| Error::ParseFailure)?;
+            let days_delta: u64 = date_iter
+                .collect::<String>()
+                .parse()
+                .map_err(|_| Error::ParseFailure)?;
             // dbg!(&msg_date);
             // dbg!(&days_delta);
-            msg_date.checked_add_days(Days::new(days_delta)).ok_or(Error::ParseFailure)
+            msg_date
+                .checked_add_days(Days::new(days_delta))
+                .ok_or(Error::ParseFailure)
         }
         Some('_') => {
             let weekday = match date_iter.collect::<String>().to_lowercase().as_str() {
@@ -74,7 +79,9 @@ fn parse_date(date_str: &str, msg_date: &NaiveDate) -> Result<NaiveDate, Error> 
             .num_days_from_monday();
             let orig_weekday = msg_date.weekday().num_days_from_monday();
             let days_delta = (7 - orig_weekday + weekday) as u64;
-            msg_date.checked_add_days(Days::new(days_delta)).ok_or(Error::ParseFailure)
+            msg_date
+                .checked_add_days(Days::new(days_delta))
+                .ok_or(Error::ParseFailure)
         }
         Some('x') => NaiveDate::parse_from_str(
             &format!("{}{}", msg_date.year(), date_iter.collect::<String>()),
@@ -157,7 +164,8 @@ impl GroqOutput {
                 titlecase.push_str(&word_chars.collect::<String>());
                 titlecase
             })
-            .collect::<String>();
+            .collect::<Vec<String>>()
+            .join(" ");
 
         let event = Event::new()
             .summary(&title)

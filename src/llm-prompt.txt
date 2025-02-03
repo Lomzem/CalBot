@@ -34,6 +34,8 @@ Please extract the title, date, starttime, endtime, location, and description fr
 
 Remember to escape double quotes when the title, location, or description contains quotes! You don't need to escape single quotes.
 
+Try to keep the title brief, no more than 5 words.
+
 If the message does not seem to be parseable, return an empty string.
 
 If there are no times in the message, do not attempt to guess the time. If there are no dates in the message, do not attempt to guess the date.
