@@ -4,7 +4,8 @@ CalBot is a Discord bot that makes it easy to add events to your iOS calendar!
 
 ## Adding to Your Server
 
-todo!
+[Invite CalBot to your server](
+https://discord.com/oauth2/authorize?client_id=1334671194925961246&permissions=67584&integration_type=0&scope=bot)
 
 ## Usage
 
