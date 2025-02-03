@@ -1,4 +1,3 @@
-use chrono::Local;
 use serenity::{
     all::{Context, CreateButton, CreateMessage, EventHandler, Message, MessageBuilder, Ready},
     async_trait,
@@ -30,11 +29,11 @@ impl EventHandler for Handler {
         let res = match msg.referenced_message {
             Some(ref ref_msg) => {
                 if let Some(edited) = ref_msg.edited_timestamp {
-                    parse_msg(&ref_msg.content, &edited.with_timezone(&Local).date_naive()).await
+                    parse_msg(&ref_msg.content, &edited.date_naive()).await
                 } else {
                     parse_msg(
                         &ref_msg.content,
-                        &ref_msg.timestamp.with_timezone(&Local).date_naive(),
+                        &ref_msg.timestamp.date_naive(),
                     )
                     .await
                 }
@@ -42,7 +41,7 @@ impl EventHandler for Handler {
             None => {
                 parse_msg(
                     &msg.content,
-                    &msg.timestamp.with_timezone(&Local).date_naive(),
+                    &msg.timestamp.date_naive(),
                 )
                 .await
             }
