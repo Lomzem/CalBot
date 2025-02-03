@@ -1,28 +1,30 @@
 mod events;
 mod parser;
 mod utils;
-use std::env;
+use shuttle_runtime::SecretStore;
 
 use events::Handler;
 use serenity::prelude::*;
 
-#[tokio::main]
-async fn main() {
-    let token = env::var("CALBOT_TOKEN").expect("Discord bot token missing");
+#[shuttle_runtime::main]
+async fn serenity(
+    #[shuttle_runtime::Secrets] secrets: SecretStore,
+) -> shuttle_serenity::ShuttleSerenity {
+    // Get the discord token set in `Secrets.toml`
+    let token = secrets
+        .get("DISCORD_TOKEN")
+        .expect("'DISCORD_TOKEN' was not found");
+
+    std::env::set_var("GROQ_API_KEY", secrets.get("GROQ_API_KEY").expect("'GROQ_API_KEY' was not found"));
+    std::env::set_var("CALBOT_CHAN", secrets.get("CALBOT_CHAN").expect("'CALBOT_CHAN' was not found"));
 
     // Set gateway intents, which decides what events the bot will be notified about
-    let intents = GatewayIntents::GUILD_MESSAGES
-        | GatewayIntents::DIRECT_MESSAGES
-        | GatewayIntents::MESSAGE_CONTENT;
+    let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
 
-    // Create a new instance of the Client, logging in as a bot. This will automatically prepend
-    // your bot token with "Bot ", which is a requirement by Discord for bot users.
-    let mut client = Client::builder(&token, intents)
+    let client = Client::builder(&token, intents)
         .event_handler(Handler)
         .await
         .expect("Err creating client");
 
-    if let Err(why) = client.start().await {
-        println!("Client error: {why:?}");
-    }
+    Ok(client.into())
 }
