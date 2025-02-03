@@ -1,6 +1,0 @@
-title="ACM meeting"
-date="+0"
-starttime="1600"
-endtime="1800"
-location="OCNL 241"
-description="cool problems, fun and welcoming community, free pizza and a chance at winning a certain 5'8\" cutout"

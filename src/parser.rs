@@ -121,7 +121,7 @@ pub async fn parse_msg(msg: &str, message_date: &NaiveDate) -> Result<Calendar, 
         return Err(Error::NoResponse.into());
     };
 
-    std::fs::write("groq-output.txt", output).expect("Failed to write groq output");
+    dbg!(&output);
 
     if output == "" || output.to_lowercase().contains("failed") {
         return Err(Error::ParseFailure.into());
