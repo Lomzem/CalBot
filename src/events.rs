@@ -1,3 +1,4 @@
+use chrono::Local;
 use serenity::{
     all::{Context, CreateButton, CreateMessage, EventHandler, Message, MessageBuilder, Ready},
     async_trait,
@@ -27,8 +28,24 @@ impl EventHandler for Handler {
         // 1. A message with information with mentions it with an @CalBot
         // 2. Replying to a message with information and mentioning @CalBot in the reply
         let res = match msg.referenced_message {
-            Some(ref ref_msg) => parse_msg(&ref_msg.content, &ref_msg.timestamp.date_naive()).await,
-            None => parse_msg(&msg.content, &msg.timestamp.date_naive()).await,
+            Some(ref ref_msg) => {
+                if let Some(edited) = ref_msg.edited_timestamp {
+                    parse_msg(&ref_msg.content, &edited.with_timezone(&Local).date_naive()).await
+                } else {
+                    parse_msg(
+                        &ref_msg.content,
+                        &ref_msg.timestamp.with_timezone(&Local).date_naive(),
+                    )
+                    .await
+                }
+            }
+            None => {
+                parse_msg(
+                    &msg.content,
+                    &msg.timestamp.with_timezone(&Local).date_naive(),
+                )
+                .await
+            }
         };
 
         match res {

@@ -55,7 +55,9 @@ fn parse_date(date_str: &str, msg_date: &NaiveDate) -> NaiveDate {
     let mut date_iter = date_str.chars();
     match date_iter.next() {
         Some('+') => {
-            let days_delta = u64::from_str_radix(&date_iter.collect::<String>(), 16).unwrap();
+            let days_delta: u64 = date_iter.collect::<String>().parse().unwrap();
+            // dbg!(&msg_date);
+            // dbg!(&days_delta);
             msg_date.checked_add_days(Days::new(days_delta)).unwrap()
         }
         Some('_') => {
