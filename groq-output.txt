@@ -1,0 +1,6 @@
+title = "ACM Club"
+date = "+0"
+starttime = "1600"
+endtime = "1800"
+location = "OCNL 241"
+description = "meeting"

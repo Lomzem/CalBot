@@ -1,6 +1,5 @@
 use std::env;
 
-use chrono::NaiveDate;
 use icalendar::{Calendar, CalendarDateTime, Component, DatePerhapsTime, EventLike};
 use serenity::all::{ChannelId, Context, CreateAttachment, CreateMessage, MessageBuilder};
 
@@ -70,7 +69,8 @@ pub fn calendar_message(calendar: &Calendar, mb: &mut MessageBuilder) {
         .push_quote_safe("**End Time**: ")
         .push_line_safe(end_dt.time().format("%l:%M %p").to_string())
         .push_quote_safe("**Location**: ")
-        .push_line_safe(event.get_location().unwrap_or("None"))
-        .push_quote_line_safe(event.get_description().unwrap_or("None"));
+        .push_line_safe(event.get_location().unwrap_or("None"));
+    if let Some(desc) = event.get_description() {
+        mb.push_quote_safe("**Description**: ").push_line_safe(desc);
+    }
 }
-

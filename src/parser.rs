@@ -1,11 +1,10 @@
-use chrono::NaiveDate;
-use icalendar::{Calendar, CalendarDateTime, Component, DatePerhapsTime};
+use chrono::{Datelike, Days, NaiveDate, NaiveTime, Weekday};
+use icalendar::{Calendar, Component, Event, EventLike};
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use serde::Deserialize;
 
 const GROQ_ENDPOINT: &str = "https://api.groq.com/openai/v1/chat/completions";
 const PROMPT_INSTRUCTIONS: &str = include_str!("llm-prompt.txt");
-const FORMAT: &str = include_str!("ics-format.ics");
 const MAX_COMPLETION_TOKEN: usize = 300;
 
 #[derive(Deserialize, Debug)]
@@ -21,6 +20,16 @@ struct GroqChoice {
 #[derive(Deserialize, Debug)]
 struct GroqMessage {
     content: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct GroqOutput {
+    title: String,
+    date: String,
+    starttime: String,
+    endtime: String,
+    location: String,
+    description: Option<String>,
 }
 
 #[derive(Debug)]
@@ -42,15 +51,42 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
+fn parse_date(date_str: &str, msg_date: &NaiveDate) -> NaiveDate {
+    let mut date_iter = date_str.chars();
+    match date_iter.next() {
+        Some('+') => {
+            let days_delta = u64::from_str_radix(&date_iter.collect::<String>(), 16).unwrap();
+            msg_date.checked_add_days(Days::new(days_delta)).unwrap()
+        }
+        Some('_') => {
+            let weekday = match date_iter.collect::<String>().to_lowercase().as_str() {
+                "mon" => Weekday::Mon,
+                "tue" => Weekday::Tue,
+                "wed" => Weekday::Wed,
+                "thu" => Weekday::Thu,
+                "fri" => Weekday::Fri,
+                "sat" => Weekday::Sat,
+                "sun" => Weekday::Sun,
+                _ => panic!("Invalid weekday"),
+            }
+            .num_days_from_monday();
+            let orig_weekday = msg_date.weekday().num_days_from_monday();
+            let days_delta = (7 - orig_weekday + weekday) as u64;
+            msg_date.checked_add_days(Days::new(days_delta)).unwrap()
+        }
+        Some('x') => NaiveDate::parse_from_str(
+            &format!("{}{}", msg_date.year(), date_iter.collect::<String>()),
+            "%Y%m%d",
+        )
+        .unwrap(),
+        _ => panic!("Invalid date format"),
+    }
+}
+
 pub async fn parse_msg(msg: &str, message_date: &NaiveDate) -> Result<Calendar, Error> {
     let groq_key = std::env::var("GROQ_API_KEY").expect("GROQ_API_KEY missing");
 
-    let cur_date_str = "When interpreting relative dates like 'next Monday', 'tomorrow', or 'in 4 days', fill DTEND, and DTSTART with \"next_%A\", \"+00\" (for today), \"+01\" (for tomorrow), or \"+04\".".to_string();
-
-    let full_prompt = [PROMPT_INSTRUCTIONS, FORMAT, &cur_date_str, msg].join("\r\n");
-    dbg!(&msg);
-
-    // dbg!(&full_prompt);
+    let full_prompt = [PROMPT_INSTRUCTIONS, msg].join("\r\n");
 
     let req_body = serde_json::json!({
         "model": "llama-3.3-70b-versatile",
@@ -77,30 +113,44 @@ pub async fn parse_msg(msg: &str, message_date: &NaiveDate) -> Result<Calendar, 
         .await
         .map_err(Error::Reqwest)?;
 
-    // dbg!(&groq_resp);
-
     let output = if let Some(groq_choice) = groq_resp.choices.first() {
         &groq_choice.message.content
     } else {
         return Err(Error::NoResponse.into());
     };
 
-    // let re = Regex::new(r"(?s)<think>.*?</think>").unwrap();
-
-    // Replace the <think> tags and their content with an empty string
-    // let output = re.replace_all(output, "").to_string();
+    std::fs::write("groq-output.txt", output).expect("Failed to write groq output");
 
     if output == "" || output.to_lowercase().contains("failed") {
         return Err(Error::ParseFailure.into());
     }
 
-    dbg!(&output);
+    let groq_output: GroqOutput = toml::from_str(output).map_err(|_| Error::ParseFailure)?;
+    Ok(groq_output
+        .to_ical(message_date)
+        .map_err(|_| Error::ParseFailure)?)
+}
 
-    // fix relative dates
-
-    let calendar: Calendar = output.parse().map_err(|_| Error::ParseFailure)?;
-
-    Ok(calendar)
+impl GroqOutput {
+    fn to_ical(&self, message_date: &NaiveDate) -> Result<Calendar, Error> {
+        let date = parse_date(&self.date, &message_date);
+        let starttime =
+            NaiveTime::parse_from_str(&self.starttime, "%H%M").map_err(|_| Error::ParseFailure)?;
+        let endtime =
+            NaiveTime::parse_from_str(&self.endtime, "%H%M").map_err(|_| Error::ParseFailure)?;
+        let description = match &self.description {
+            Some(desc) => desc,
+            None => "",
+        };
+        let event = Event::new()
+            .summary(&self.title)
+            .starts(date.and_time(starttime))
+            .ends(date.and_time(endtime))
+            .description(description)
+            .location(&self.location)
+            .done();
+        Ok(Calendar::new().push(event).done())
+    }
 }
 
 #[cfg(test)]

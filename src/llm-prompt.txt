@@ -1,27 +1,38 @@
-You are a data extractor for calendar events. Given a message, extract information, and output it in JSON format:
+You are a data extractor for calendar events. Given a message, extract information, and output it in toml (key=val) format:
 
-Use these keys in your JSON output:
+Use these keys in your env output:
 - title: Event title
 - date: Event date
-- start_time: Event start time
-- end_time: Event end time
+- starttime: Event start time
+- endtime: Event end time
 - location: Event location
-- description: Event description
+- description: Extra information about the event
 
-All keys should be strings. Pay attention to the formats for date and time:
+All of the values are strings.
 
-Time Format
-Use strftime format %H%M.
+# Time Format
+Use strftime format %H%M. That means use 24 hour time format and pad the hours and minutes with a 0 if less than 10.
 
-Date Formats
-Relative Dates: Use "+00" for today, "+01" for tomorrow, etc.
-Relative Weekdays: Use "_Mon" for next Monday, "_Wed" for next Wednesday, etc.
-Exact Dates: Use "exMMDD" format (e.g., "ex0921" for 9/21).
-Only include the JSON! Nothing else!
+Also if AM/PM is not provided, assume the time is between 9AM to 8PM.
 
-Please extract the title, date, start_time, end_time, and location from the following message, and output the extracted data in the specified JSON format as plaintext.
+If only one time is provided, use it for both start and end time.
 
-If the message does not seem to be parseable, return an empty JSON object.
+# Date Formats
+Relative Dates: Use "+0" for today, "+1" for tomorrow, etc. I repeat. When you encounter tomorrow, use "+1" not "+0". Also, use HEX for the digits NOT DECIMAL.
+Relative Weekdays: Use "_mon" for next Monday, "_wed" for next Wednesday, etc.
+Exact Dates: Use "xMMDD" format (e.g., "x0921" for 9/21).
+
+If there are a combination of date formats, use this order (most to least priority): Relative Dates, Exact Dates, Relative Weekdays.
+
+If there are multiple dates, use the earliest (start) date.
+
+# Final Notes
+
+Only include the TOML! Nothing else!
+
+Please extract the title, date, starttime, endtime, location, and description from the following message, and output the extracted data in the specified TOML format as plaintext.
+
+If the message does not seem to be parseable, return an empty string. Don't even include the toml keys.
 
 Message:
 
