@@ -51,14 +51,14 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-fn parse_date(date_str: &str, msg_date: &NaiveDate) -> NaiveDate {
+fn parse_date(date_str: &str, msg_date: &NaiveDate) -> Result<NaiveDate, Error> {
     let mut date_iter = date_str.chars();
     match date_iter.next() {
         Some('+') => {
-            let days_delta: u64 = date_iter.collect::<String>().parse().unwrap();
+            let days_delta: u64 = date_iter.collect::<String>().parse().map_err(|_| Error::ParseFailure)?;
             // dbg!(&msg_date);
             // dbg!(&days_delta);
-            msg_date.checked_add_days(Days::new(days_delta)).unwrap()
+            msg_date.checked_add_days(Days::new(days_delta)).ok_or(Error::ParseFailure)
         }
         Some('_') => {
             let weekday = match date_iter.collect::<String>().to_lowercase().as_str() {
@@ -69,19 +69,19 @@ fn parse_date(date_str: &str, msg_date: &NaiveDate) -> NaiveDate {
                 "fri" => Weekday::Fri,
                 "sat" => Weekday::Sat,
                 "sun" => Weekday::Sun,
-                _ => panic!("Invalid weekday"),
+                _ => return Err(Error::ParseFailure),
             }
             .num_days_from_monday();
             let orig_weekday = msg_date.weekday().num_days_from_monday();
             let days_delta = (7 - orig_weekday + weekday) as u64;
-            msg_date.checked_add_days(Days::new(days_delta)).unwrap()
+            msg_date.checked_add_days(Days::new(days_delta)).ok_or(Error::ParseFailure)
         }
         Some('x') => NaiveDate::parse_from_str(
             &format!("{}{}", msg_date.year(), date_iter.collect::<String>()),
             "%Y%m%d",
         )
-        .unwrap(),
-        _ => panic!("Invalid date format"),
+        .map_err(|_| Error::ParseFailure),
+        _ => return Err(Error::ParseFailure),
     }
 }
 
@@ -135,7 +135,7 @@ pub async fn parse_msg(msg: &str, message_date: &NaiveDate) -> Result<Calendar, 
 
 impl GroqOutput {
     fn to_ical(&self, message_date: &NaiveDate) -> Result<Calendar, Error> {
-        let date = parse_date(&self.date, &message_date);
+        let date = parse_date(&self.date, &message_date)?;
         let starttime =
             NaiveTime::parse_from_str(&self.starttime, "%H%M").map_err(|_| Error::ParseFailure)?;
         let endtime =
@@ -144,8 +144,23 @@ impl GroqOutput {
             Some(desc) => desc,
             None => "",
         };
+
+        let title = self
+            .title
+            .split_whitespace()
+            .map(|word| {
+                let mut titlecase = String::new();
+                let mut word_chars = word.chars();
+                if let Some(first) = word_chars.next() {
+                    titlecase.push(first.to_ascii_uppercase());
+                }
+                titlecase.push_str(&word_chars.collect::<String>());
+                titlecase
+            })
+            .collect::<String>();
+
         let event = Event::new()
-            .summary(&self.title)
+            .summary(&title)
             .starts(date.and_time(starttime))
             .ends(date.and_time(endtime))
             .description(description)
