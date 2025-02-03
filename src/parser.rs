@@ -509,7 +509,7 @@ mod tests {
                     start_datetime.date(),
                     NaiveDate::from_ymd_opt(2025, 2, 3).unwrap()
                 );
-                assert_eq!(start_datetime.time().hour(), 5);
+                assert_eq!(start_datetime.time().hour(), 17);
                 assert_eq!(start_datetime.time().minute(), 0);
             }
         }
