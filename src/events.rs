@@ -1,5 +1,8 @@
 use serenity::{
-    all::{Context, CreateButton, CreateMessage, EventHandler, Message, MessageBuilder, Ready},
+    all::{
+        Context, CreateButton, CreateMessage, EventHandler, Guild, Message, MessageBuilder,
+        Permissions, Ready,
+    },
     async_trait,
 };
 
@@ -18,8 +21,34 @@ impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
         let bot_id = ctx.cache.current_user().id;
 
+        if msg.author.id == bot_id {
+            // don't care about bot messages
+            return;
+        }
+
         if !msg.mentions_user_id(&bot_id) {
             // bot only responds to @CalBot mentions
+            return;
+        }
+
+        // check that user is an admin
+        let guild = Guild::get(&ctx, msg.guild_id.unwrap())
+            .await
+            .expect("msg should have guild");
+        let member = guild
+            .member(&ctx, msg.author.id)
+            .await
+            .expect("msg should have came from member in guild");
+        let perms = guild.member_permissions(&member);
+
+        if !perms.administrator() {
+            if let Err(why) = msg
+                .channel_id
+                .say(&ctx, "Sorry! Only admins can use this bot.")
+                .await
+            {
+                println!("Error sending message: {why}");
+            }
             return;
         }
 
@@ -31,20 +60,10 @@ impl EventHandler for Handler {
                 if let Some(edited) = ref_msg.edited_timestamp {
                     parse_msg(&ref_msg.content, &edited.date_naive()).await
                 } else {
-                    parse_msg(
-                        &ref_msg.content,
-                        &ref_msg.timestamp.date_naive(),
-                    )
-                    .await
+                    parse_msg(&ref_msg.content, &ref_msg.timestamp.date_naive()).await
                 }
             }
-            None => {
-                parse_msg(
-                    &msg.content,
-                    &msg.timestamp.date_naive(),
-                )
-                .await
-            }
+            None => parse_msg(&msg.content, &msg.timestamp.date_naive()).await,
         };
 
         match res {
