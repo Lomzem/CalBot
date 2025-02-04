@@ -59,8 +59,6 @@ fn parse_date(date_str: &str, msg_date: &NaiveDate) -> Result<NaiveDate, Error> 
                 .collect::<String>()
                 .parse()
                 .map_err(|_| Error::ParseFailure)?;
-            // dbg!(&msg_date);
-            // dbg!(&days_delta);
             msg_date
                 .checked_add_days(Days::new(days_delta))
                 .ok_or(Error::ParseFailure)
