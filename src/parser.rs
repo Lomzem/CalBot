@@ -210,6 +210,33 @@ mod tests {
         assert_eq!(res, intended_date);
     }
 
+    #[tokio::test]
+    async fn parse_date_relwd_same_day_mon() {
+        let date_msg = "_mon";
+        let date = NaiveDate::from_ymd_opt(2025, 2, 3).unwrap();
+        let res = parse_date(&date_msg, &date).unwrap();
+        let intended_date = NaiveDate::from_ymd_opt(2025, 2, 10).unwrap();
+        assert_eq!(res, intended_date);
+    }
+
+    #[tokio::test]
+    async fn parse_date_relwd_same_day_thu() {
+        let date_msg = "_thu";
+        let date = NaiveDate::from_ymd_opt(2025, 2, 6).unwrap();
+        let res = parse_date(&date_msg, &date).unwrap();
+        let intended_date = NaiveDate::from_ymd_opt(2025, 2, 13).unwrap();
+        assert_eq!(res, intended_date);
+    }
+
+    #[tokio::test]
+    async fn parse_date_relwd_same_day_sun() {
+        let date_msg = "_sun";
+        let date = NaiveDate::from_ymd_opt(2025, 2, 9).unwrap();
+        let res = parse_date(&date_msg, &date).unwrap();
+        let intended_date = NaiveDate::from_ymd_opt(2025, 2, 16).unwrap();
+        assert_eq!(res, intended_date);
+    }
+
     // by default, ignore tests that require a POST request to the Groq API
 
     #[tokio::test]
