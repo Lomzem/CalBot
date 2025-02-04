@@ -76,7 +76,16 @@ fn parse_date(date_str: &str, msg_date: &NaiveDate) -> Result<NaiveDate, Error> 
             }
             .num_days_from_monday();
             let orig_weekday = msg_date.weekday().num_days_from_monday();
-            let days_delta = (7 - orig_weekday + weekday) as u64;
+            dbg!(&orig_weekday);
+            dbg!(&weekday);
+            let days_delta = if orig_weekday < weekday {
+                println!("smaller");
+                (weekday - orig_weekday) as u64
+            } else {
+                println!("bigger");
+                (7 - orig_weekday + weekday) as u64
+            } as u64;
+
             msg_date
                 .checked_add_days(Days::new(days_delta))
                 .ok_or(Error::ParseFailure)
@@ -182,6 +191,24 @@ mod tests {
     use icalendar::{Component, EventLike};
 
     use super::*;
+
+    #[tokio::test]
+    async fn parse_date_relwd_early_late() {
+        let date_msg = "_thu";
+        let date = NaiveDate::from_ymd_opt(2025, 2, 4).unwrap();
+        let res = parse_date(&date_msg, &date).unwrap();
+        let intended_date = NaiveDate::from_ymd_opt(2025, 2, 6).unwrap();
+        assert_eq!(res, intended_date);
+    }
+
+    #[tokio::test]
+    async fn parse_date_relwd_late_early() {
+        let date_msg = "_tue";
+        let date = NaiveDate::from_ymd_opt(2025, 2, 1).unwrap();
+        let res = parse_date(&date_msg, &date).unwrap();
+        let intended_date = NaiveDate::from_ymd_opt(2025, 2, 4).unwrap();
+        assert_eq!(res, intended_date);
+    }
 
     // by default, ignore tests that require a POST request to the Groq API
 
