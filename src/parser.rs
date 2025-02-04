@@ -552,6 +552,7 @@ mod tests {
             }
         }
     }
+
     #[tokio::test]
     #[ignore]
     async fn real_usr0_1_28_25() {
@@ -606,6 +607,82 @@ mod tests {
                 );
                 assert_eq!(end_datetime.time().hour(), 18);
                 assert_eq!(end_datetime.time().minute(), 0);
+            }
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn real_tpc_2_3_25() {
+        let msg = "@everyone It is my great pleasure to announce TPC's first meeting of the semester! Join us this Thursday, at 5 PM in OCNL 241 for an inspiring talk on careers, life, and projects by *James Krepelka*, an experienced lecturer and software veteran of Amazon, Google, Palo Alto Networks, and more! See you there! Additionally, if you’re interested in graphics programming, TPC's Graphics Division is looking to find a time for its first meeting of the semester! No prior graphics experience required! Graphics Division will be meeting weekly on Wednesdays, starting next week. Please use the when2meet to help select a time! https://www.when2meet.com/?28823530-WUAPh";
+        let msg_date = NaiveDate::from_ymd_opt(2025, 2, 3).unwrap();
+        let res = parse_msg(&msg, &msg_date).await;
+
+        assert!(matches!(res, Ok(_)));
+        let calendar = res.unwrap();
+        assert_eq!(calendar.components.len(), 1);
+        let event = calendar.components.first().unwrap().as_event().unwrap();
+
+        let location = event.get_location();
+        assert!(location.is_some(), "Expected location to be present");
+        assert_eq!(location.unwrap(), "OCNL 241");
+
+        let start_dt = event.get_start();
+        assert!(start_dt.is_some(), "Expected start date to be present");
+        let start_dt = start_dt.unwrap();
+        assert!(matches!(start_dt, icalendar::DatePerhapsTime::DateTime(_)));
+        if let icalendar::DatePerhapsTime::DateTime(calendar_date_time) = start_dt {
+            assert!(
+                matches!(calendar_date_time, icalendar::CalendarDateTime::Floating(_)),
+                "{}",
+                format!("{:?}", calendar_date_time)
+            );
+
+            if let icalendar::CalendarDateTime::Floating(start_datetime) = calendar_date_time {
+                assert_eq!(
+                    start_datetime.date(),
+                    NaiveDate::from_ymd_opt(2025, 2, 6).unwrap()
+                );
+                assert_eq!(start_datetime.time().hour(), 17);
+                assert_eq!(start_datetime.time().minute(), 0);
+            }
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn real_tpc_11_20_24() {
+        let msg = "@everyone It is my great pleasure to announce TPC's first meeting of the semester! Join us this Thursday, at 5 PM in OCNL 241 for an inspiring talk on careers, life, and projects by *James Krepelka*, an experienced lecturer and software veteran of Amazon, Google, Palo Alto Networks, and more! See you there! Additionally, if you’re interested in graphics programming, TPC's Graphics Division is looking to find a time for its first meeting of the semester! No prior graphics experience required! Graphics Division will be meeting weekly on Wednesdays, starting next week. Please use the when2meet to help select a time! https://www.when2meet.com/?28823530-WUAPh";
+        let msg_date = NaiveDate::from_ymd_opt(2024, 11, 20).unwrap();
+        let res = parse_msg(&msg, &msg_date).await;
+
+        assert!(matches!(res, Ok(_)));
+        let calendar = res.unwrap();
+        assert_eq!(calendar.components.len(), 1);
+        let event = calendar.components.first().unwrap().as_event().unwrap();
+
+        let location = event.get_location();
+        assert!(location.is_some(), "Expected location to be present");
+        assert_eq!(location.unwrap(), "OCNL 241");
+
+        let start_dt = event.get_start();
+        assert!(start_dt.is_some(), "Expected start date to be present");
+        let start_dt = start_dt.unwrap();
+        assert!(matches!(start_dt, icalendar::DatePerhapsTime::DateTime(_)));
+        if let icalendar::DatePerhapsTime::DateTime(calendar_date_time) = start_dt {
+            assert!(
+                matches!(calendar_date_time, icalendar::CalendarDateTime::Floating(_)),
+                "{}",
+                format!("{:?}", calendar_date_time)
+            );
+
+            if let icalendar::CalendarDateTime::Floating(start_datetime) = calendar_date_time {
+                assert_eq!(
+                    start_datetime.date(),
+                    NaiveDate::from_ymd_opt(2024, 11, 21).unwrap()
+                );
+                assert_eq!(start_datetime.time().hour(), 17);
+                assert_eq!(start_datetime.time().minute(), 0);
             }
         }
     }

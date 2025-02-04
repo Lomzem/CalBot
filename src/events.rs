@@ -1,7 +1,6 @@
 use serenity::{
     all::{
-        Context, CreateButton, CreateMessage, EventHandler, Guild, Message, MessageBuilder,
-        Permissions, Ready,
+        Context, CreateButton, CreateMessage, EventHandler, Guild, Message, MessageBuilder, Ready,
     },
     async_trait,
 };
