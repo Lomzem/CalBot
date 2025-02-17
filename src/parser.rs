@@ -79,12 +79,10 @@ fn parse_date(date_str: &str, msg_date: &NaiveDate) -> Result<NaiveDate, Error> 
             dbg!(&orig_weekday);
             dbg!(&weekday);
             let days_delta = if orig_weekday < weekday {
-                println!("smaller");
                 (weekday - orig_weekday) as u64
             } else {
-                println!("bigger");
                 (7 - orig_weekday + weekday) as u64
-            } as u64;
+            };
 
             msg_date
                 .checked_add_days(Days::new(days_delta))
@@ -95,7 +93,7 @@ fn parse_date(date_str: &str, msg_date: &NaiveDate) -> Result<NaiveDate, Error> 
             "%Y%m%d",
         )
         .map_err(|_| Error::ParseFailure),
-        _ => return Err(Error::ParseFailure),
+        _ => Err(Error::ParseFailure),
     }
 }
 
@@ -132,24 +130,24 @@ pub async fn parse_msg(msg: &str, message_date: &NaiveDate) -> Result<Calendar, 
     let output = if let Some(groq_choice) = groq_resp.choices.first() {
         &groq_choice.message.content
     } else {
-        return Err(Error::NoResponse.into());
+        return Err(Error::NoResponse);
     };
 
     dbg!(&output);
 
-    if output == "" || output.to_lowercase().contains("failed") {
-        return Err(Error::ParseFailure.into());
+    if output.is_empty() || output.to_lowercase().contains("failed") {
+        return Err(Error::ParseFailure);
     }
 
     let groq_output: GroqOutput = toml::from_str(output).map_err(|_| Error::ParseFailure)?;
-    Ok(groq_output
+    groq_output
         .to_ical(message_date)
-        .map_err(|_| Error::ParseFailure)?)
+        .map_err(|_| Error::ParseFailure)
 }
 
 impl GroqOutput {
     fn to_ical(&self, message_date: &NaiveDate) -> Result<Calendar, Error> {
-        let date = parse_date(&self.date, &message_date)?;
+        let date = parse_date(&self.date, message_date)?;
         let starttime =
             NaiveTime::parse_from_str(&self.starttime, "%H%M").map_err(|_| Error::ParseFailure)?;
         let endtime =
@@ -196,7 +194,7 @@ mod tests {
     async fn parse_date_relwd_early_late() {
         let date_msg = "_thu";
         let date = NaiveDate::from_ymd_opt(2025, 2, 4).unwrap();
-        let res = parse_date(&date_msg, &date).unwrap();
+        let res = parse_date(date_msg, &date).unwrap();
         let intended_date = NaiveDate::from_ymd_opt(2025, 2, 6).unwrap();
         assert_eq!(res, intended_date);
     }
@@ -205,7 +203,7 @@ mod tests {
     async fn parse_date_relwd_late_early() {
         let date_msg = "_tue";
         let date = NaiveDate::from_ymd_opt(2025, 2, 1).unwrap();
-        let res = parse_date(&date_msg, &date).unwrap();
+        let res = parse_date(date_msg, &date).unwrap();
         let intended_date = NaiveDate::from_ymd_opt(2025, 2, 4).unwrap();
         assert_eq!(res, intended_date);
     }
@@ -214,7 +212,7 @@ mod tests {
     async fn parse_date_relwd_same_day_mon() {
         let date_msg = "_mon";
         let date = NaiveDate::from_ymd_opt(2025, 2, 3).unwrap();
-        let res = parse_date(&date_msg, &date).unwrap();
+        let res = parse_date(date_msg, &date).unwrap();
         let intended_date = NaiveDate::from_ymd_opt(2025, 2, 10).unwrap();
         assert_eq!(res, intended_date);
     }
@@ -223,7 +221,7 @@ mod tests {
     async fn parse_date_relwd_same_day_thu() {
         let date_msg = "_thu";
         let date = NaiveDate::from_ymd_opt(2025, 2, 6).unwrap();
-        let res = parse_date(&date_msg, &date).unwrap();
+        let res = parse_date(date_msg, &date).unwrap();
         let intended_date = NaiveDate::from_ymd_opt(2025, 2, 13).unwrap();
         assert_eq!(res, intended_date);
     }
@@ -232,7 +230,7 @@ mod tests {
     async fn parse_date_relwd_same_day_sun() {
         let date_msg = "_sun";
         let date = NaiveDate::from_ymd_opt(2025, 2, 9).unwrap();
-        let res = parse_date(&date_msg, &date).unwrap();
+        let res = parse_date(date_msg, &date).unwrap();
         let intended_date = NaiveDate::from_ymd_opt(2025, 2, 16).unwrap();
         assert_eq!(res, intended_date);
     }
@@ -243,7 +241,7 @@ mod tests {
     #[ignore]
     async fn mock_irrelevant_input() {
         let msg = "69420";
-        let res = parse_msg(&msg, &Local::now().date_naive()).await;
+        let res = parse_msg(msg, &Local::now().date_naive()).await;
         assert!(matches!(res, Err(Error::ParseFailure)));
     }
 
@@ -252,9 +250,9 @@ mod tests {
     async fn mock_today_date() {
         let msg = "ACM Club is meeting today from 4-6pm in OCNL 241!";
         let date = Local::now().date_naive();
-        let res = parse_msg(&msg, &date).await;
+        let res = parse_msg(msg, &date).await;
 
-        assert!(matches!(res, Ok(_)));
+        assert!(res.is_ok());
         let calendar = res.unwrap();
         assert_eq!(calendar.components.len(), 1);
         let event = calendar.components.first().unwrap().as_event().unwrap();
@@ -301,9 +299,9 @@ mod tests {
     async fn mock_tmrw_historical_leap_year() {
         let msg = "ACM Club is meeting tomorrow from 4-6pm in OCNL 241!";
         let date = NaiveDate::from_ymd_opt(2024, 2, 28).unwrap();
-        let res = parse_msg(&msg, &date).await;
+        let res = parse_msg(msg, &date).await;
 
-        assert!(matches!(res, Ok(_)));
+        assert!(res.is_ok());
         let calendar = res.unwrap();
         assert_eq!(calendar.components.len(), 1);
         let event = calendar.components.first().unwrap().as_event().unwrap();
@@ -350,9 +348,9 @@ mod tests {
     async fn mock_2_days_historical_leap_year() {
         let msg = "ACM Club is meeting in two days from 4-6pm in OCNL 241!";
         let final_date = NaiveDate::from_ymd_opt(2020, 2, 29).unwrap();
-        let res = parse_msg(&msg, &final_date.checked_sub_days(Days::new(2)).unwrap()).await;
+        let res = parse_msg(msg, &final_date.checked_sub_days(Days::new(2)).unwrap()).await;
 
-        assert!(matches!(res, Ok(_)));
+        assert!(res.is_ok());
         let calendar = res.unwrap();
         assert_eq!(calendar.components.len(), 1);
         let event = calendar.components.first().unwrap().as_event().unwrap();
@@ -399,9 +397,9 @@ mod tests {
     async fn mock_5_days_historical_leap_year() {
         let msg = "ACM Club is meeting in five days from 5-7pm in OCNL 241!";
         let final_date = NaiveDate::from_ymd_opt(2020, 2, 29).unwrap();
-        let res = parse_msg(&msg, &final_date.checked_sub_days(Days::new(5)).unwrap()).await;
+        let res = parse_msg(msg, &final_date.checked_sub_days(Days::new(5)).unwrap()).await;
 
-        assert!(matches!(res, Ok(_)));
+        assert!(res.is_ok());
         let calendar = res.unwrap();
         assert_eq!(calendar.components.len(), 1);
         let event = calendar.components.first().unwrap().as_event().unwrap();
@@ -448,9 +446,9 @@ mod tests {
     async fn mock_missing_end_time() {
         let msg = "ACM Club is meeting in tomorrow at 4pm in OCNL 241!";
         let date = NaiveDate::from_ymd_opt(2021, 6, 9).unwrap();
-        let res = parse_msg(&msg, &date).await;
+        let res = parse_msg(msg, &date).await;
 
-        assert!(matches!(res, Ok(_)));
+        assert!(res.is_ok());
         let calendar = res.unwrap();
         assert_eq!(calendar.components.len(), 1);
         let event = calendar.components.first().unwrap().as_event().unwrap();
@@ -500,9 +498,9 @@ mod tests {
     async fn mock_exact_date() {
         let msg = "ACM Club is meeting on 10/31 from 11:30-2:45pm in the Mechoopda Dorms";
         let date = NaiveDate::from_ymd_opt(2009, 6, 9).unwrap();
-        let res = parse_msg(&msg, &date).await;
+        let res = parse_msg(msg, &date).await;
 
-        assert!(matches!(res, Ok(_)));
+        assert!(res.is_ok());
         let calendar = res.unwrap();
         assert_eq!(calendar.components.len(), 1);
         let event = calendar.components.first().unwrap().as_event().unwrap();
@@ -558,9 +556,9 @@ mod tests {
     async fn real_usr0_1_28_25() {
         let msg = "Hey @everyone Voting has concluded and it has been decided that our meeting time this semester will be Mondays from 5-6 in OCNL 239.  Our first meeting will be next Monday where we will be discussing the schedule for the upcoming semester, and doing some intro into hacking and cybersecurity.";
         let date = NaiveDate::from_ymd_opt(2025, 1, 28).unwrap();
-        let res = parse_msg(&msg, &date).await;
+        let res = parse_msg(msg, &date).await;
 
-        assert!(matches!(res, Ok(_)));
+        assert!(res.is_ok());
         let calendar = res.unwrap();
         assert_eq!(calendar.components.len(), 1);
         let event = calendar.components.first().unwrap().as_event().unwrap();
@@ -616,9 +614,9 @@ mod tests {
     async fn real_tpc_2_3_25() {
         let msg = "@everyone It is my great pleasure to announce TPC's first meeting of the semester! Join us this Thursday, at 5 PM in OCNL 241 for an inspiring talk on careers, life, and projects by *James Krepelka*, an experienced lecturer and software veteran of Amazon, Google, Palo Alto Networks, and more! See you there! Additionally, if you’re interested in graphics programming, TPC's Graphics Division is looking to find a time for its first meeting of the semester! No prior graphics experience required! Graphics Division will be meeting weekly on Wednesdays, starting next week. Please use the when2meet to help select a time! https://www.when2meet.com/?28823530-WUAPh";
         let msg_date = NaiveDate::from_ymd_opt(2025, 2, 3).unwrap();
-        let res = parse_msg(&msg, &msg_date).await;
+        let res = parse_msg(msg, &msg_date).await;
 
-        assert!(matches!(res, Ok(_)));
+        assert!(res.is_ok());
         let calendar = res.unwrap();
         assert_eq!(calendar.components.len(), 1);
         let event = calendar.components.first().unwrap().as_event().unwrap();
@@ -654,9 +652,9 @@ mod tests {
     async fn real_tpc_11_20_24() {
         let msg = "@everyone It is my great pleasure to announce TPC's first meeting of the semester! Join us this Thursday, at 5 PM in OCNL 241 for an inspiring talk on careers, life, and projects by *James Krepelka*, an experienced lecturer and software veteran of Amazon, Google, Palo Alto Networks, and more! See you there! Additionally, if you’re interested in graphics programming, TPC's Graphics Division is looking to find a time for its first meeting of the semester! No prior graphics experience required! Graphics Division will be meeting weekly on Wednesdays, starting next week. Please use the when2meet to help select a time! https://www.when2meet.com/?28823530-WUAPh";
         let msg_date = NaiveDate::from_ymd_opt(2024, 11, 20).unwrap();
-        let res = parse_msg(&msg, &msg_date).await;
+        let res = parse_msg(msg, &msg_date).await;
 
-        assert!(matches!(res, Ok(_)));
+        assert!(res.is_ok());
         let calendar = res.unwrap();
         assert_eq!(calendar.components.len(), 1);
         let event = calendar.components.first().unwrap().as_event().unwrap();
